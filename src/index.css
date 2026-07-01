@@ -11,6 +11,7 @@
   --warning-bg: #fff4e5;
   --warning-border: #f0c36d;
   --highlight-bg: #eef1ff;
+  color-scheme: light;
 
   font:
     15px/1.5 system-ui,
@@ -21,19 +22,22 @@
   background: var(--bg);
 }
 
-.app--dark {
-  --bg: #16171d;
-  --bg-panel: #1f2028;
-  --text: #e6e6ea;
-  --text-muted: #a6a6b3;
-  --border: #33333e;
-  --accent: #a78bfa;
-  --accent-contrast: #16171d;
-  --danger: #ff8a80;
-  --danger-bg: #3a1f1d;
-  --warning-bg: #3a3120;
-  --warning-border: #7a5c1e;
-  --highlight-bg: #262a45;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16171d;
+    --bg-panel: #1f2028;
+    --text: #e6e6ea;
+    --text-muted: #a6a6b3;
+    --border: #33333e;
+    --accent: #a78bfa;
+    --accent-contrast: #16171d;
+    --danger: #ff8a80;
+    --danger-bg: #3a1f1d;
+    --warning-bg: #3a3120;
+    --warning-border: #7a5c1e;
+    --highlight-bg: #262a45;
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -64,10 +68,6 @@ body {
 .app-header h1 {
   font-size: 22px;
   margin: 0;
-}
-
-.theme-toggle {
-  white-space: nowrap;
 }
 
 .warning-banner {

@@ -1,10 +1,7 @@
+import { useEmbeddingSettings } from "../context/EmbeddingSettingsContext";
 import type { EmbeddingModel } from "../types";
 
 interface ModelSelectorProps {
-  model: EmbeddingModel;
-  onModelChange: (model: EmbeddingModel) => void;
-  dimensions: number | undefined;
-  onDimensionsChange: (dimensions: number | undefined) => void;
   useCache: boolean;
   onUseCacheChange: (value: boolean) => void;
   cacheEntryCount: number;
@@ -18,15 +15,13 @@ const MODELS: EmbeddingModel[] = [
 
 /** Model + optional dimensions selector, plus cache controls. */
 export function ModelSelector({
-  model,
-  onModelChange,
-  dimensions,
-  onDimensionsChange,
   useCache,
   onUseCacheChange,
   cacheEntryCount,
   onClearCache,
 }: ModelSelectorProps) {
+  const { model, setModel, dimensions, setDimensions } = useEmbeddingSettings();
+
   return (
     <div className="panel">
       <div className="field-row">
@@ -37,7 +32,7 @@ export function ModelSelector({
           <select
             id="model-select"
             value={model}
-            onChange={(e) => onModelChange(e.target.value as EmbeddingModel)}
+            onChange={(e) => setModel(e.target.value as EmbeddingModel)}
           >
             {MODELS.map((m) => (
               <option key={m} value={m}>
@@ -59,7 +54,7 @@ export function ModelSelector({
             value={dimensions ?? ""}
             onChange={(e) => {
               const raw = e.target.value;
-              onDimensionsChange(raw === "" ? undefined : Number(raw));
+              setDimensions(raw === "" ? undefined : Number(raw));
             }}
           />
         </div>

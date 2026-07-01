@@ -1,9 +1,8 @@
 import { useRef } from "react";
+import { useEmbeddingSettings } from "../context/EmbeddingSettingsContext";
 import type { EmbeddingModel, ExperimentExport } from "../types";
 
 interface ExportImportProps {
-  model: EmbeddingModel;
-  dimensions: number | undefined;
   inputs: string[];
   embeddings: number[][];
   similarities: number[][];
@@ -66,14 +65,13 @@ function validateExperimentExport(value: unknown): ExperimentExport {
 
 /** Export the current experiment to a JSON file, or import one from disk. */
 export function ExportImport({
-  model,
-  dimensions,
   inputs,
   embeddings,
   similarities,
   onImport,
   onError,
 }: ExportImportProps) {
+  const { model, dimensions } = useEmbeddingSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleExport() {

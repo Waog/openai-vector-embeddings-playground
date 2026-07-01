@@ -6,6 +6,7 @@ import { ModelSelector } from "./components/ModelSelector";
 import { RankingList } from "./components/RankingList";
 import { ScatterPlot } from "./components/ScatterPlot";
 import { SimilarityMatrix } from "./components/SimilarityMatrix";
+import { useEmbeddingSettings } from "./context/EmbeddingSettingsContext";
 import {
   buildCacheKey,
   clearEmbeddingCache,
@@ -15,11 +16,7 @@ import {
 } from "./lib/cache";
 import { fetchEmbeddings, OpenAIRequestError } from "./lib/openaiEmbeddings";
 import { buildSimilarityMatrix } from "./lib/similarity";
-import type {
-  EmbeddingModel,
-  EmbeddingRecord,
-  ExperimentExport,
-} from "./types";
+import type { EmbeddingRecord, ExperimentExport } from "./types";
 
 const API_KEY_STORAGE_KEY = "oevp.apiKey";
 
@@ -38,8 +35,7 @@ export default function App() {
     () => localStorage.getItem(API_KEY_STORAGE_KEY) !== null,
   );
   const [inputText, setInputText] = useState("");
-  const [model, setModel] = useState<EmbeddingModel>("text-embedding-3-small");
-  const [dimensions, setDimensions] = useState<number | undefined>(undefined);
+  const { model, setModel, dimensions, setDimensions } = useEmbeddingSettings();
   const [useCache, setUseCache] = useState(true);
   const [cacheEntryCount, setCacheEntryCount] = useState(() =>
     getEmbeddingCacheEntryCount(),
@@ -50,7 +46,6 @@ export default function App() {
   const [selectedQueryIndex, setSelectedQueryIndex] = useState<number | null>(
     null,
   );
-  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const parsedInputs = useMemo(() => parseInputLines(inputText), [inputText]);
 
@@ -172,17 +167,17 @@ export default function App() {
   }
 
   return (
-    <div className={`app app--${theme}`}>
+    <div className="app">
       <header className="app-header">
         <h1>OpenAI Vector Embeddings Playground</h1>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-        >
-          {theme === "light" ? "Dark mode" : "Light mode"}
-        </button>
       </header>
+
+      <ModelSelector
+        useCache={useCache}
+        onUseCacheChange={setUseCache}
+        cacheEntryCount={cacheEntryCount}
+        onClearCache={handleClearCache}
+      />
 
       <p className="warning-banner">
         ⚠️ This app sends your inputs directly from your browser to OpenAI's API
@@ -210,21 +205,8 @@ export default function App() {
             onClear={handleClearResults}
           />
 
-          <ModelSelector
-            model={model}
-            onModelChange={setModel}
-            dimensions={dimensions}
-            onDimensionsChange={setDimensions}
-            useCache={useCache}
-            onUseCacheChange={setUseCache}
-            cacheEntryCount={cacheEntryCount}
-            onClearCache={handleClearCache}
-          />
-
           <div className="panel">
             <ExportImport
-              model={model}
-              dimensions={dimensions}
               inputs={inputs}
               embeddings={embeddings}
               similarities={similarityMatrix}
