@@ -14,6 +14,7 @@ interface InputEditorProps {
   inputCount: number;
   loading: boolean;
   onFetch: () => void;
+  onLoadKnownEmbeddings: () => void;
   fetchStatus: Array<{ input: string; source: "cache" | "api" }>;
 }
 
@@ -24,6 +25,7 @@ export function InputEditor({
   inputCount,
   loading,
   onFetch,
+  onLoadKnownEmbeddings,
   fetchStatus,
 }: InputEditorProps) {
   return (
@@ -31,13 +33,34 @@ export function InputEditor({
       <label className="field-label" htmlFor="input-editor">
         Inputs (one per line)
       </label>
-      <textarea
-        id="input-editor"
-        rows={10}
-        placeholder={EXAMPLE_INPUTS}
-        value={text}
-        onChange={(e) => onTextChange(e.target.value)}
-      />
+      <div className="input-editor-wrap">
+        <div className="input-editor-overlay-controls">
+          <button
+            type="button"
+            className="button-compact"
+            onClick={() => onTextChange(EXAMPLE_INPUTS)}
+            disabled={loading}
+          >
+            Load example set
+          </button>
+          <button
+            type="button"
+            className="button-compact"
+            onClick={onLoadKnownEmbeddings}
+            disabled={loading}
+          >
+            Load known embeddings
+          </button>
+        </div>
+
+        <textarea
+          id="input-editor"
+          rows={10}
+          placeholder={EXAMPLE_INPUTS}
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+        />
+      </div>
       <p className="hint-text">
         {inputCount} non-empty input{inputCount === 1 ? "" : "s"} will be
         embedded. Blank lines are ignored.
@@ -49,13 +72,6 @@ export function InputEditor({
           disabled={loading || inputCount === 0}
         >
           {loading ? "Fetching…" : "Fetch embeddings"}
-        </button>
-        <button
-          type="button"
-          onClick={() => onTextChange(EXAMPLE_INPUTS)}
-          disabled={loading}
-        >
-          Load example set
         </button>
       </div>
 

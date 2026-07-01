@@ -133,6 +133,12 @@ export default function App() {
     setFocusedCacheKey(null);
   }
 
+  function handleReloadKnownEmbeddings() {
+    setInputText(knownEntries.map((entry) => entry.input).join("\n"));
+    setCacheEntryCount(getEmbeddingCacheEntryCount());
+    setKnownRevision((value) => value + 1);
+  }
+
   async function handleFetch() {
     setError(null);
 
@@ -201,7 +207,6 @@ export default function App() {
       );
 
       setKnownRevision((value) => value + 1);
-      setFocusedCacheKey(null);
     } catch (err) {
       if (err instanceof OpenAIRequestError) {
         setError(err.message);
@@ -292,15 +297,6 @@ export default function App() {
             onRememberKeyChange={handleRememberKeyChange}
           />
 
-          <InputEditor
-            text={inputText}
-            onTextChange={setInputText}
-            inputCount={parsedInputs.length}
-            loading={loading}
-            onFetch={() => void handleFetch()}
-            fetchStatus={latestFetchStatus}
-          />
-
           <div className="panel">
             <ExportImport
               inputs={inputs}
@@ -321,6 +317,16 @@ export default function App() {
         </div>
 
         <div className="column">
+          <InputEditor
+            text={inputText}
+            onTextChange={setInputText}
+            inputCount={parsedInputs.length}
+            loading={loading}
+            onFetch={() => void handleFetch()}
+            onLoadKnownEmbeddings={handleReloadKnownEmbeddings}
+            fetchStatus={latestFetchStatus}
+          />
+
           <KnownEmbeddingsList
             entries={knownEntries}
             onToggle={handleKnownToggle}
