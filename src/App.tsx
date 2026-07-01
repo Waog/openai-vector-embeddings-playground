@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { ExportImport } from "./components/ExportImport";
 import { InputEditor } from "./components/InputEditor";
+import { KnownEmbeddingsList } from "./components/KnownEmbeddingsList";
 import { ModelSelector } from "./components/ModelSelector";
 import { RankingList } from "./components/RankingList";
 import { ScatterPlot } from "./components/ScatterPlot";
@@ -10,13 +11,19 @@ import { useEmbeddingSettings } from "./context/EmbeddingSettingsContext";
 import {
   buildCacheKey,
   clearEmbeddingCache,
+  deleteKnownEmbedding,
   getCachedEmbedding,
   getEmbeddingCacheEntryCount,
-  setCachedEmbedding,
+  getKnownEmbeddingsSortMode,
+  listKnownEmbeddings,
+  setAllKnownEmbeddingsEnabled,
+  setKnownEmbeddingEnabled,
+  setKnownEmbeddingsSortMode,
+  upsertKnownEmbedding,
 } from "./lib/cache";
 import { fetchEmbeddings, OpenAIRequestError } from "./lib/openaiEmbeddings";
 import { buildSimilarityMatrix } from "./lib/similarity";
-import type { EmbeddingRecord, ExperimentExport } from "./types";
+import type { ExperimentExport } from "./types";
 
 const API_KEY_STORAGE_KEY = "oevp.apiKey";
 
@@ -40,21 +47,58 @@ export default function App() {
   const [cacheEntryCount, setCacheEntryCount] = useState(() =>
     getEmbeddingCacheEntryCount(),
   );
-  const [records, setRecords] = useState<EmbeddingRecord[]>([]);
+  const [knownRevision, setKnownRevision] = useState(0);
+  const [sortMode, setSortMode] = useState(() => getKnownEmbeddingsSortMode());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [latestFetchStatus, setLatestFetchStatus] = useState<
+    Array<{ input: string; source: "cache" | "api" }>
+  >([]);
   const [selectedQueryIndex, setSelectedQueryIndex] = useState<number | null>(
     null,
   );
 
   const parsedInputs = useMemo(() => parseInputLines(inputText), [inputText]);
 
-  const inputs = useMemo(() => records.map((r) => r.input), [records]);
-  const embeddings = useMemo(() => records.map((r) => r.embedding), [records]);
+  const knownEntries = useMemo(() => {
+    const entries = listKnownEmbeddings(model, dimensions);
+    if (sortMode === "alphabetical") {
+      entries.sort((a, b) => a.input.localeCompare(b.input));
+    } else {
+      entries.sort((a, b) => {
+        const updatedDiff = b.updatedAt - a.updatedAt;
+        if (updatedDiff !== 0) return updatedDiff;
+        const createdDiff = b.createdAt - a.createdAt;
+        if (createdDiff !== 0) return createdDiff;
+        return a.input.localeCompare(b.input);
+      });
+    }
+    return entries;
+  }, [model, dimensions, knownRevision, sortMode]);
+
+  const visibleEntries = useMemo(
+    () => knownEntries.filter((entry) => entry.enabled),
+    [knownEntries],
+  );
+
+  const inputs = useMemo(
+    () => visibleEntries.map((entry) => entry.input),
+    [visibleEntries],
+  );
+  const embeddings = useMemo(
+    () => visibleEntries.map((entry) => entry.embedding),
+    [visibleEntries],
+  );
   const similarityMatrix = useMemo(
     () => buildSimilarityMatrix(embeddings),
     [embeddings],
   );
+
+  useEffect(() => {
+    if (selectedQueryIndex !== null && selectedQueryIndex >= inputs.length) {
+      setSelectedQueryIndex(null);
+    }
+  }, [inputs.length, selectedQueryIndex]);
 
   function handleRememberKeyChange(remember: boolean) {
     setRememberKey(remember);
@@ -75,6 +119,8 @@ export default function App() {
   function handleClearCache() {
     clearEmbeddingCache();
     setCacheEntryCount(0);
+    setKnownRevision((value) => value + 1);
+    setSelectedQueryIndex(null);
   }
 
   async function handleFetch() {
@@ -93,14 +139,19 @@ export default function App() {
     try {
       // Resolve what we can from the cache first (if enabled), and collect
       // the unique set of inputs that still need an API call.
-      const resolved = new Map<string, number[]>();
       const missing = new Set<string>();
 
       for (const input of parsedInputs) {
         const key = buildCacheKey(model, dimensions, input);
         const cached = useCache ? getCachedEmbedding(key) : undefined;
         if (cached) {
-          resolved.set(input, cached);
+          upsertKnownEmbedding({
+            model,
+            dimensions,
+            input,
+            embedding: cached,
+            source: "cache",
+          });
         } else {
           missing.add(input);
         }
@@ -116,21 +167,30 @@ export default function App() {
         });
         missingList.forEach((input, i) => {
           const embedding = fetched[i];
-          resolved.set(input, embedding);
-          const key = buildCacheKey(model, dimensions, input);
-          setCachedEmbedding(key, embedding);
+          upsertKnownEmbedding({
+            model,
+            dimensions,
+            input,
+            embedding,
+            source: "api",
+          });
         });
         setCacheEntryCount(getEmbeddingCacheEntryCount());
       }
 
-      const newRecords: EmbeddingRecord[] = parsedInputs.map((input) => ({
-        input,
-        model,
-        dimensions,
-        embedding: resolved.get(input)!,
-        source: missing.has(input) ? "api" : "cache",
-      }));
-      setRecords(newRecords);
+      // Ensure metadata exists even when every requested embedding came from cache.
+      if (missing.size === 0) {
+        setCacheEntryCount(getEmbeddingCacheEntryCount());
+      }
+
+      setLatestFetchStatus(
+        parsedInputs.map((input) => ({
+          input,
+          source: missing.has(input) ? "api" : "cache",
+        })),
+      );
+
+      setKnownRevision((value) => value + 1);
       setSelectedQueryIndex(null);
     } catch (err) {
       if (err instanceof OpenAIRequestError) {
@@ -143,27 +203,49 @@ export default function App() {
     }
   }
 
-  function handleClearResults() {
-    setRecords([]);
-    setError(null);
-    setSelectedQueryIndex(null);
-  }
-
   function handleImport(data: ExperimentExport) {
     setModel(data.model);
     setDimensions(data.dimensions);
     setInputText(data.inputs.join("\n"));
-    setRecords(
-      data.inputs.map((input, i) => ({
-        input,
+    data.inputs.forEach((input, i) => {
+      upsertKnownEmbedding({
         model: data.model,
         dimensions: data.dimensions,
+        input,
         embedding: data.embeddings[i],
-        source: "import" as const,
-      })),
-    );
+        source: "import",
+      });
+    });
+    setCacheEntryCount(getEmbeddingCacheEntryCount());
+    setKnownRevision((value) => value + 1);
     setSelectedQueryIndex(null);
     setError(null);
+    setLatestFetchStatus([]);
+  }
+
+  function handleKnownToggle(cacheKey: string, enabled: boolean) {
+    setKnownEmbeddingEnabled(cacheKey, enabled);
+    setKnownRevision((value) => value + 1);
+  }
+
+  function handleKnownDelete(cacheKey: string) {
+    deleteKnownEmbedding(cacheKey);
+    setCacheEntryCount(getEmbeddingCacheEntryCount());
+    setKnownRevision((value) => value + 1);
+    setSelectedQueryIndex(null);
+  }
+
+  function handleSortModeChange(nextSortMode: "recent" | "alphabetical") {
+    setSortMode(nextSortMode);
+    setKnownEmbeddingsSortMode(nextSortMode);
+  }
+
+  function handleToggleAllKnown(enabled: boolean) {
+    setAllKnownEmbeddingsEnabled(model, dimensions, enabled);
+    setKnownRevision((value) => value + 1);
+    if (!enabled) {
+      setSelectedQueryIndex(null);
+    }
   }
 
   return (
@@ -202,7 +284,7 @@ export default function App() {
             inputCount={parsedInputs.length}
             loading={loading}
             onFetch={() => void handleFetch()}
-            onClear={handleClearResults}
+            fetchStatus={latestFetchStatus}
           />
 
           <div className="panel">
@@ -219,29 +301,20 @@ export default function App() {
           {loading && <p className="hint-text">Fetching embeddings…</p>}
 
           <p className="hint-text">
-            {parsedInputs.length} input line(s) in editor · {records.length}{" "}
-            embedded · {cacheEntryCount} cached
+            {parsedInputs.length} input line(s) in editor · {inputs.length}{" "}
+            shown · {cacheEntryCount} cached
           </p>
         </div>
 
         <div className="column">
-          {records.length > 0 && (
-            <div className="panel">
-              <h2>Embedding status</h2>
-              <ul className="status-list">
-                {records.map((record, i) => (
-                  <li key={i} title={record.input}>
-                    <span
-                      className={`source-badge source-badge--${record.source}`}
-                    >
-                      {record.source}
-                    </span>
-                    {record.input}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <KnownEmbeddingsList
+            entries={knownEntries}
+            onToggle={handleKnownToggle}
+            onDelete={handleKnownDelete}
+            sortMode={sortMode}
+            onSortModeChange={handleSortModeChange}
+            onToggleAll={handleToggleAllKnown}
+          />
 
           <div className="panel">
             <h2>Similarity matrix</h2>

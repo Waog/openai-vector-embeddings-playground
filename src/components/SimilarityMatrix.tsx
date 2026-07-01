@@ -19,7 +19,7 @@ export function SimilarityMatrix({ inputs, matrix }: SimilarityMatrixProps) {
   if (inputs.length < 2) {
     return (
       <p className="hint-text">
-        Fetch at least 2 embeddings to see a similarity matrix.
+        Enable at least 2 known embeddings to see a similarity matrix.
       </p>
     );
   }

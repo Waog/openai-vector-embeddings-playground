@@ -19,7 +19,7 @@ export function RankingList({
   if (inputs.length < 2) {
     return (
       <p className="hint-text">
-        Fetch at least 2 embeddings to rank similarities.
+        Enable at least 2 known embeddings to rank similarities.
       </p>
     );
   }

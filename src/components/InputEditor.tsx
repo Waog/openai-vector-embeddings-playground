@@ -14,7 +14,7 @@ interface InputEditorProps {
   inputCount: number;
   loading: boolean;
   onFetch: () => void;
-  onClear: () => void;
+  fetchStatus: Array<{ input: string; source: "cache" | "api" }>;
 }
 
 /** Textarea for one input per line, plus the main action buttons. */
@@ -24,7 +24,7 @@ export function InputEditor({
   inputCount,
   loading,
   onFetch,
-  onClear,
+  fetchStatus,
 }: InputEditorProps) {
   return (
     <div className="panel">
@@ -50,9 +50,6 @@ export function InputEditor({
         >
           {loading ? "Fetching…" : "Fetch embeddings"}
         </button>
-        <button type="button" onClick={onClear} disabled={loading}>
-          Clear results
-        </button>
         <button
           type="button"
           onClick={() => onTextChange(EXAMPLE_INPUTS)}
@@ -61,6 +58,19 @@ export function InputEditor({
           Load example set
         </button>
       </div>
+
+      {fetchStatus.length > 0 && (
+        <ul className="fetch-status-list">
+          {fetchStatus.map((entry, i) => (
+            <li key={`${entry.input}-${i}`} title={entry.input}>
+              <span className={`source-badge source-badge--${entry.source}`}>
+                {entry.source}
+              </span>
+              <span className="fetch-status-text">{entry.input}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
