@@ -3,8 +3,7 @@ import { rankBySimilarity } from "../lib/similarity";
 interface RankingListProps {
   inputs: string[];
   embeddings: number[][];
-  selectedIndex: number | null;
-  onSelectedIndexChange: (index: number | null) => void;
+  focusedIndex: number | null;
 }
 
 const TOP_MATCH_COUNT = 3;
@@ -13,8 +12,7 @@ const TOP_MATCH_COUNT = 3;
 export function RankingList({
   inputs,
   embeddings,
-  selectedIndex,
-  onSelectedIndexChange,
+  focusedIndex,
 }: RankingListProps) {
   if (inputs.length < 2) {
     return (
@@ -25,47 +23,39 @@ export function RankingList({
   }
 
   const ranked =
-    selectedIndex !== null
-      ? rankBySimilarity(selectedIndex, inputs, embeddings)
+    focusedIndex !== null
+      ? rankBySimilarity(focusedIndex, inputs, embeddings)
       : [];
 
   return (
     <div>
-      <label className="field-label" htmlFor="query-select">
-        Query input
-      </label>
-      <select
-        id="query-select"
-        value={selectedIndex ?? ""}
-        onChange={(e) =>
-          onSelectedIndexChange(
-            e.target.value === "" ? null : Number(e.target.value),
-          )
-        }
-      >
-        <option value="">Select an input…</option>
-        {inputs.map((input, i) => (
-          <option key={i} value={i}>
-            {input}
-          </option>
-        ))}
-      </select>
+      {focusedIndex === null ? (
+        <p className="hint-text">
+          Focus an entry with the eye button in Known embeddings to rank
+          similarities.
+        </p>
+      ) : (
+        <>
+          <p className="field-label">Query input</p>
+          <p className="ranked-query-name" title={inputs[focusedIndex]}>
+            {inputs[focusedIndex]}
+          </p>
 
-      {selectedIndex !== null && (
-        <ol className="ranking-list">
-          {ranked.map((match, position) => (
-            <li
-              key={match.index}
-              className={position < TOP_MATCH_COUNT ? "top-match" : undefined}
-              title={match.input}
-            >
-              <span className="rank-similarity">
-                {match.similarity.toFixed(3)}
-              </span>
-              <span className="rank-input">{match.input}</span>
-            </li>
-          ))}
-        </ol>
+          <ol className="ranking-list">
+            {ranked.map((match, position) => (
+              <li
+                key={match.index}
+                className={position < TOP_MATCH_COUNT ? "top-match" : undefined}
+                title={match.input}
+              >
+                <span className="rank-similarity">
+                  {match.similarity.toFixed(3)}
+                </span>
+                <span className="rank-input">{match.input}</span>
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </div>
   );

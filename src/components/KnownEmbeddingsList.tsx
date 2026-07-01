@@ -7,6 +7,8 @@ interface KnownEmbeddingsListProps {
   entries: KnownEmbeddingEntry[];
   onToggle: (cacheKey: string, enabled: boolean) => void;
   onDelete: (cacheKey: string) => void;
+  focusedCacheKey: string | null;
+  onFocusToggle: (cacheKey: string) => void;
   sortMode: KnownEmbeddingsSortMode;
   onSortModeChange: (mode: KnownEmbeddingsSortMode) => void;
   onToggleAll: (enabled: boolean) => void;
@@ -27,6 +29,8 @@ export function KnownEmbeddingsList({
   entries,
   onToggle,
   onDelete,
+  focusedCacheKey,
+  onFocusToggle,
   sortMode,
   onSortModeChange,
   onToggleAll,
@@ -91,6 +95,43 @@ export function KnownEmbeddingsList({
                 />
                 <span className="known-item-text">{entry.input}</span>
               </label>
+
+              <button
+                type="button"
+                className={`icon-button icon-button--focus${
+                  focusedCacheKey === entry.cacheKey
+                    ? " icon-button--focus-active"
+                    : ""
+                }`}
+                disabled={!entry.enabled}
+                onClick={() => onFocusToggle(entry.cacheKey)}
+                title={
+                  !entry.enabled
+                    ? "Enable this entry to focus it"
+                    : focusedCacheKey === entry.cacheKey
+                      ? "Clear focused entry"
+                      : "Focus this entry"
+                }
+                aria-label={
+                  !entry.enabled
+                    ? "Enable this entry to focus it"
+                    : focusedCacheKey === entry.cacheKey
+                      ? "Clear focused entry"
+                      : "Focus this entry"
+                }
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Zm10 3.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
 
               <button
                 type="button"

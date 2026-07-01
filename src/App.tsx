@@ -54,9 +54,7 @@ export default function App() {
   const [latestFetchStatus, setLatestFetchStatus] = useState<
     Array<{ input: string; source: "cache" | "api" }>
   >([]);
-  const [selectedQueryIndex, setSelectedQueryIndex] = useState<number | null>(
-    null,
-  );
+  const [focusedCacheKey, setFocusedCacheKey] = useState<string | null>(null);
 
   const parsedInputs = useMemo(() => parseInputLines(inputText), [inputText]);
 
@@ -93,12 +91,24 @@ export default function App() {
     () => buildSimilarityMatrix(embeddings),
     [embeddings],
   );
+  const focusedVisibleIndex = useMemo(() => {
+    if (focusedCacheKey === null) return null;
+    const index = visibleEntries.findIndex(
+      (entry) => entry.cacheKey === focusedCacheKey,
+    );
+    return index >= 0 ? index : null;
+  }, [focusedCacheKey, visibleEntries]);
 
   useEffect(() => {
-    if (selectedQueryIndex !== null && selectedQueryIndex >= inputs.length) {
-      setSelectedQueryIndex(null);
+    if (
+      focusedCacheKey !== null &&
+      !knownEntries.some(
+        (entry) => entry.cacheKey === focusedCacheKey && entry.enabled,
+      )
+    ) {
+      setFocusedCacheKey(null);
     }
-  }, [inputs.length, selectedQueryIndex]);
+  }, [focusedCacheKey, knownEntries]);
 
   function handleRememberKeyChange(remember: boolean) {
     setRememberKey(remember);
@@ -120,7 +130,7 @@ export default function App() {
     clearEmbeddingCache();
     setCacheEntryCount(0);
     setKnownRevision((value) => value + 1);
-    setSelectedQueryIndex(null);
+    setFocusedCacheKey(null);
   }
 
   async function handleFetch() {
@@ -191,7 +201,7 @@ export default function App() {
       );
 
       setKnownRevision((value) => value + 1);
-      setSelectedQueryIndex(null);
+      setFocusedCacheKey(null);
     } catch (err) {
       if (err instanceof OpenAIRequestError) {
         setError(err.message);
@@ -218,7 +228,7 @@ export default function App() {
     });
     setCacheEntryCount(getEmbeddingCacheEntryCount());
     setKnownRevision((value) => value + 1);
-    setSelectedQueryIndex(null);
+    setFocusedCacheKey(null);
     setError(null);
     setLatestFetchStatus([]);
   }
@@ -232,7 +242,11 @@ export default function App() {
     deleteKnownEmbedding(cacheKey);
     setCacheEntryCount(getEmbeddingCacheEntryCount());
     setKnownRevision((value) => value + 1);
-    setSelectedQueryIndex(null);
+    setFocusedCacheKey((current) => (current === cacheKey ? null : current));
+  }
+
+  function handleFocusToggle(cacheKey: string) {
+    setFocusedCacheKey((current) => (current === cacheKey ? null : cacheKey));
   }
 
   function handleSortModeChange(nextSortMode: "recent" | "alphabetical") {
@@ -244,7 +258,7 @@ export default function App() {
     setAllKnownEmbeddingsEnabled(model, dimensions, enabled);
     setKnownRevision((value) => value + 1);
     if (!enabled) {
-      setSelectedQueryIndex(null);
+      setFocusedCacheKey(null);
     }
   }
 
@@ -311,6 +325,8 @@ export default function App() {
             entries={knownEntries}
             onToggle={handleKnownToggle}
             onDelete={handleKnownDelete}
+            focusedCacheKey={focusedCacheKey}
+            onFocusToggle={handleFocusToggle}
             sortMode={sortMode}
             onSortModeChange={handleSortModeChange}
             onToggleAll={handleToggleAllKnown}
@@ -318,7 +334,11 @@ export default function App() {
 
           <div className="panel">
             <h2>Similarity matrix</h2>
-            <SimilarityMatrix inputs={inputs} matrix={similarityMatrix} />
+            <SimilarityMatrix
+              inputs={inputs}
+              matrix={similarityMatrix}
+              focusedIndex={focusedVisibleIndex}
+            />
           </div>
 
           <div className="panel">
@@ -326,14 +346,17 @@ export default function App() {
             <RankingList
               inputs={inputs}
               embeddings={embeddings}
-              selectedIndex={selectedQueryIndex}
-              onSelectedIndexChange={setSelectedQueryIndex}
+              focusedIndex={focusedVisibleIndex}
             />
           </div>
 
           <div className="panel">
             <h2>2D scatter plot (PCA)</h2>
-            <ScatterPlot inputs={inputs} embeddings={embeddings} />
+            <ScatterPlot
+              inputs={inputs}
+              embeddings={embeddings}
+              focusedIndex={focusedVisibleIndex}
+            />
           </div>
         </div>
       </div>

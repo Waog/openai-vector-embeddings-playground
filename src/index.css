@@ -238,6 +238,19 @@ button:not([disabled]):hover {
   font-weight: 600;
 }
 
+.similarity-table .focused-axis-cell {
+  background: color-mix(in oklab, var(--highlight-bg) 65%, var(--accent) 10%);
+}
+
+.similarity-table .focused-cross-cell {
+  background: color-mix(in oklab, var(--highlight-bg) 72%, var(--accent) 8%);
+}
+
+.similarity-table .focused-cross-origin {
+  background: color-mix(in oklab, var(--highlight-bg) 54%, var(--accent) 24%);
+  font-weight: 700;
+}
+
 .ranking-list {
   list-style: none;
   margin: 10px 0 0;
@@ -259,6 +272,18 @@ button:not([disabled]):hover {
 .ranking-list li.top-match {
   background: var(--highlight-bg);
   font-weight: 600;
+}
+
+.ranked-query-name {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rank-similarity {
@@ -402,6 +427,18 @@ button:not([disabled]):hover {
   color: var(--danger);
 }
 
+.icon-button--focus {
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.icon-button--focus-active {
+  border-color: var(--accent);
+  background: var(--highlight-bg);
+  color: var(--accent);
+}
+
 @media (max-width: 560px) {
   .known-item-text {
     white-space: normal;
@@ -417,6 +454,31 @@ button:not([disabled]):hover {
   padding: 6px 10px;
   font-size: 12.5px;
   max-width: 260px;
+}
+
+.scatter-legend {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.scatter-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.scatter-legend-item.is-focused {
+  font-weight: 600;
+}
+
+.scatter-legend-marker {
+  flex-shrink: 0;
 }
 
 .scatter-labels {
